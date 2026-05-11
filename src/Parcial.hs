@@ -2,9 +2,9 @@ pdePerritos.hs
 
 Juguetes :: [Juguetes] 
 
-data Perritos {
+data Perritos = unPerrito {
     raza :: String,
-    juguetesFavoritos :: Juguetes,
+    juguetesFavoritos :: [Juguete],
     tiempoEnGuarderia :: Int, //se mide en minutos
     energia :: Int,
 }
@@ -43,12 +43,7 @@ diaDeCampo :: Perritos -> Perritos
 diaDeCampo unPerrito = perderPrimerJuguete . jugar $ unPerrito
 
 Zara :: Perritos
-Zara {
-    raza == "Dalmata",
-    juguetesFavoritos == ["Pelota", "Mantita"],
-    tiempoEnGuarderia == 90, 
-    energia == 80
-}
+Zara = unPerrito "Dalmata" ["Pelota", "Mantita"] 90 80
 
 Guarderias :: [Guarderias]
 Ejercicio :: String
