@@ -1,3 +1,6 @@
+module Parcial where
+import Text.Show.Functions()
+
 -- Parte A
 type Juguetes = String
 
