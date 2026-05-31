@@ -1,67 +1,89 @@
-pdePerritos.hs
-
-Juguetes :: [Juguetes] 
+-- Parte A
+type Juguetes = String
 
 data Perritos = unPerrito {
     raza :: String,
-    juguetesFavoritos :: [Juguete],
-    tiempoEnGuarderia :: Int, //se mide en minutos
-    energia :: Int,
-}
+    juguetesFavoritos :: [Juguetes],
+    tiempoEnGuarderia :: Int, -- se mide en minutos
+    energia :: Int
+} deriving (Show, Eq)
 
+type Ejercicio = Perritos -> Perritos
 
-modificarEnergia :: Int -> Perritos -> Perritos
+modificarEnergia :: (Int -> Int) -> Perritos -> Perritos
 modificarEnergia unaFuncion unPerrito = unPerrito {energia = max 0 . unaFuncion . energia $ unPerrito}
 
-jugar :: Perritos -> Perritos 
-jugar unPerrito = modificarEnergia (-10) unPerrito
+jugar :: Ejercicio 
+jugar unPerrito = modificarEnergia (\x -> x - 10) unPerrito
  
 type Ladridos = Int
-ladrar :: Ladridos -> Perritos -> Perritos
-ladrar  unPerrito unosLadridos = modificarEnergia . div ´2´ unosLadridos $ unPerrito
 
-raza :: Perritos -> String
-raza (raza, _, _, _) = raza
+ladrar :: Ladridos -> Ejercicio
+ladrar unosLadridos unPerrito = modificarEnergia (+ (div unosLadridos 2)) unPerrito 
+
+regalar :: Juguetes -> Ejercicio
+regalar unJuguete unPerrito = unPerrito {juguetesFavoritos = juguetesFavoritos unPerrito ++ [unJuguete]}
+
 esDalmata :: Perritos -> Bool
 esDalmata unPerrito = raza unPerrito == "Dalmata"
+
 esPomerania :: Perritos -> Bool
 esPomerania unPerrito = raza unPerrito == "Pomerania"
+
 esDeRazaExtravagante :: Perritos -> Bool
 esDeRazaExtravagante unPerrito = esDalmata unPerrito || esPomerania unPerrito
 
-esDiaDeSpa :: Perritos -> Bool
-esDiaDeSpa unPerrito = TiempoEnGuarderia unPerrito >=50 && esDeRazaExtravagante unPerrito == "True" 
-regalarJuguete :: Juguetes -> Juguetes
-regalarJuguete unJuguete [unosJuguetes] = unJuguete ++ [unosJuguetes] 
-diaDeSpa 
-|esDiaDeSpa unPerrito = regalarJuguete "peine de goma" && modificarEnergia (==100) unPerrito
-|otherwise  = unPerrito 
+diaDeSpa :: Ejercicio
+diaDeSpa unPerrito  
+    |tiempoEnGuarderia unPerrito >= 50 || esDeRazaExtravagante unPerrito = regalar "peine de goma" (unPerrito {energia = 100})
+    |otherwise  = unPerrito 
 
 perderPrimerJuguete :: Perritos -> Perritos
-perderPrimerJuguete unPerrito = drop 1 . juguetesFavoritos $ unPerrito
-diaDeCampo :: Perritos -> Perritos 
+perderPrimerJuguete unPerrito = unPerrito {juguetesFavoritos = drop 1 (juguetesFavoritos unPerrito)} 
+
+diaDeCampo :: Ejercicio
 diaDeCampo unPerrito = perderPrimerJuguete . jugar $ unPerrito
 
-Zara :: Perritos
-Zara = unPerrito "Dalmata" ["Pelota", "Mantita"] 90 80
+zara :: Perritos
+zara = unPerrito "Dalmata" ["Pelota", "Mantita"] 90 80
 
-Guarderias :: [Guarderias]
-Ejercicio :: String
-Tiempo :: Int
+type Tiempo = Int
 
-data Guarderias = UnaGuarderia {
-    Nombre :: String,
-    [Rutina] :: [(Ejercicio, Tiempo)]
+type Rutina = (Ejercicio, Tiempo)
+
+data Guarderias = unaGuarderia {
+    nombre :: String,
+    rutina :: [Rutina]
 } 
 
-GuarderiaPdePerritos :: Guarderias
-GuarderiaPdePerritos UnaGuarderia
-    "GuarderíaPdePerritos" 
-    [(jugar, 30), (ladrar, 20), (regalarPelota, 0), (spa, 120), (campo, 720)]
+guarderiaPdePerritos :: Guarderias
+guarderiaPdePerritos = unaGuarderia "GuarderíaPdePerritos" [(jugar, 30), (ladrar 18, 20), (regalar "Pelota", 0), (diaDeSpa, 120), (diaDeCampo, 720)]
 
+--Parte B
 
-//composicion de map con + sumando los tiempos de rutina y que sea <= a tiempoEnGuarderia
-HabilitadoAEstar :: Int -> Perritos -> Bool
-HabilitadoAEstar sumaDeTiempos unPerrito = sum . map $ GuarderiaPdePerritos (_,(_,Tiempo)) <= tiempoEnGuarderia unPerrito
+habilitadoAEstar :: Perritos -> Guarderias -> Bool
+habilitadoAEstar unPerrito unaGuarderia = tiempoEnGuarderia unPerrito > tiempoDeRutina unaGuarderia
 
-PerrosResponsables :: Perritos -> Bool //componer con dia de campo
+tiempoDeRutina :: Guarderias -> Int
+tiempoDeRutina unaGuarderia = sum . map snd $ rutina unaGuarderia 
+
+perrosResponsables :: Perritos -> Bool 
+perrosResponsables unPerrito = (length . juguetesFavoritos . diaDeCampo $ unPerrito) > 3
+
+perroRealizaRutina :: Perritos -> Guarderias -> Perritos
+perroRealizaRutina unPerrito unaGuarderia
+    | habilitadoAEstar unPerrito unaGuarderia = aplicarEjercicios (rutina unaGuarderia) unPerrito
+    | otherwise = unPerrito
+
+aplicarEjercicios :: [Rutina] -> Perritos -> Perritos
+aplicarEjercicios unosEjercicios unPerrito = foldl aplicarEjercicio unPerrito unosEjercicios 
+
+aplicarEjercicio :: Perritos -> Rutina -> Perritos
+aplicarEjercicio unPerrito (unEjercicio, _) = unEjercicio unPerrito   
+
+perroCansado :: Perritos -> Bool
+perroCansado unPerro = energia unPerro < 5
+
+perrosCansados :: [Perritos] -> Guarderias -> [Perritos]
+--perrosCansados unosPerros unaGuarderia = filter perroCansado (map (\p -> perroRealizaRutina p unaGuarderia) unosPerros) 
+perrosCansados unosPerros unaGuarderia = filter perroCansado . map (\p -> perroRealizaRutina p unaGuarderia) $ unosPerros
